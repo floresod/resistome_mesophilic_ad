@@ -1,0 +1,28 @@
+---
+title: 'Resistome analysis: mesophilic AD'
+author: "Daniel Flores Orozco"
+date: "04/02/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, echo=FALSE, warning=FALSE}
+#load libraries 
+library(tidyverse)
+library (readxl)
+library(stats)
+library(dbplyr)
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer) #To create color palettes
+library(boot) #to calculate SD of diversity index
+library(kableExtra) # for fancy tables
+
+options(digits = 3, scipen = 999)
+
+```
+
+
