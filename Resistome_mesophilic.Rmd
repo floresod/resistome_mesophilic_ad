@@ -1,7 +1,7 @@
 ---
 title: 'Resistome analysis: mesophilic AD'
 author: "Daniel Flores Orozco"
-date: "04/02/2022"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 ---
 
@@ -9,10 +9,10 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r libraries, echo=FALSE, warning=FALSE}
+```{r libraries, include=FALSE}
 #load libraries 
 library(tidyverse)
-library (readxl)
+#library (readxl)
 library(stats)
 library(dbplyr)
 library(tidyverse)
@@ -22,6 +22,75 @@ library(boot) #to calculate SD of diversity index
 library(kableExtra) # for fancy tables
 
 options(digits = 3, scipen = 999)
+
+```
+
+
+```{r raw data, echo=FALSE, warning=FALSE}
+
+#### load microbial raw data from Metastorm ####
+#set 1 
+micro1 <- read.csv(file = "data/mesophilic_ad_micro1.csv", check.names = FALSE)
+#rename column 1
+names(micro1)[1] <- "sample"
+
+#set 2
+micro2 <- read.csv(file = "data/mesophilic_ad_micro2.csv", check.names = FALSE)
+#rename column 1
+names(micro2)[1] <- "sample"
+
+## put data together 
+# tidy form micro 1
+temp_micro1 <- micro1 %>% 
+  pivot_longer(cols = -sample, names_to = "microbe", values_to = "abundance")
+
+#tidy form micro 2
+temp_micro2 <- micro2 %>% 
+  pivot_longer(cols = -sample, names_to = "microbe", values_to = "abundance")
+
+#microbial data: join data from 2 set 
+data_micro <- rbind(temp_micro1, temp_micro2) %>% 
+  group_by(sample) %>%
+  mutate(relative_abundance = abundance/sum(abundance)) %>%  #calculate relative abundance 
+  ungroup() %>% 
+  group_by(microbe) %>%
+  mutate(max_abundance = max(relative_abundance)) %>%
+  ungroup()
+
+  
+
+
+#### load resistome raw data from metastorm: CARD 3.1.1 (Jan 2021)
+#set 1
+resistome1 <- read.csv(file = "data/mesophilic_ad_res1.csv", check.names = FALSE)
+#rename column 1 
+names(resistome1)[1] <- "sample"
+
+#set 2
+resistome2 <- read.csv(file = "data/mesophilic_ad_res2.csv", check.names = FALSE)
+#rename column 2 
+names(resistome2)[1] <-  "sample"
+
+#put data together 
+#tidy resistome set 1
+temp_res1 <- resistome1 %>%
+  pivot_longer(cols = -sample, names_to = "gene_id", values_to = "abundance")
+
+#tidy resistome set 2
+temp_res2 <- resistome2 %>%
+  pivot_longer(cols = -sample, names_to = "gene_id", values_to = "abundance" )
+
+#resistome data: join 2 data sets 
+data_resistome <- rbind(temp_res1, temp_res2)
+
+
+# remove objects 
+rm(micro1, micro2, resistome1, resistome2, temp_micro1, temp_micro2, temp_res1, temp_res2 )
+
+```
+
+
+```{r microbial abundance, echo=FALSE, warning=FALSE}
 
 ```
 
