@@ -1,0 +1,153 @@
+---
+title: "Correlations"
+author: "Daniel Flores Orozco"
+date: "08/02/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, include=FALSE}
+library(Hmisc)
+library(tidyverse)
+library(tidyr)
+library(stats)
+library(dbplyr)
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer) #To create color palettes
+#library(boot) #to calculate SD of diversity index
+#library(kableExtra) # for fancy tables
+#library(taxize) #for taxonomical annotation
+library(vegan)
+library(corrplot)
+library(fields)
+library(pheatmap)
+
+options(digits = 3, scipen = 999)
+
+```
+
+```{r master correlations, echo=FALSE}
+#load matrix micro 
+load("rda/matrix_micro.rda")
+#load matrix resistome
+load("rda/matrix_resistome.rda")
+
+#load taxonomic data 
+load("rda/micro_tax.rda")
+
+#get phyla 
+microbe_phyla <- micro_tax %>% 
+  separate(lineage, sep = ";", into = c("root", "domain", "phylum", "class", "order" )) %>% 
+  arrange(phylum)
+
+#microbe names
+names_microbes <- microbe_phyla$microbe
+
+
+
+# ARG annotation 
+#load card 
+load(file = "rda/CARD_2021.rda")
+# select columns 
+CARD_2021 <- CARD_2021 %>% 
+  select(gene_id, antibiotic_class, mechanism)
+
+#remove duplicated args in this data base 
+CARD_2021 <- CARD_2021 %>% 
+  filter(!duplicated(gene_id))
+
+#adjust entries with more than one mechanism and adjust names (remove "antibiotic") 
+CARD_2021$mechanism <- CARD_2021$mechanism %>% 
+  str_remove_all(";[a-z]+\\s[a-z]+\\s[a-z]+") %>% 
+  str_remove_all("antibiotic\\s") %>% 
+  str_remove_all("\\sto\\santibiotic")
+
+#arg names 
+names_arg <- colnames(matrix_resistome)
+
+#ARG annotated 
+arg_annot <- CARD_2021 %>% 
+  filter(gene_id %in% names_arg) %>% 
+  arrange(mechanism)
+
+#order names_arg by mechanisms 
+names_arg <- arg_annot$gene_id
+
+#remove card
+rm(CARD_2021)
+
+
+#create matrix with all data: microbes and args 
+matrix_master <- cbind(matrix_micro, matrix_resistome)
+
+
+#### Correlations #### 
+correlations <- rcorr(matrix_master, type = "pearson")
+
+#correlation coefficients of arg:microbes only
+corr_coeff <- correlations$r[names_arg, names_microbes] 
+
+
+#plot with fields 
+image.plot(corr_coeff, zlim = c(-1,1))
+
+```
+
+
+```{r plots correlations, echo=FALSE, fig.width= 13, fig.height= 13}
+#create a table with coefficients 
+tb_coeff <- corr_coeff %>% as_tibble() %>% 
+  mutate(gene_id = rownames(corr_coeff)) %>% 
+  pivot_longer(cols = -gene_id, names_to = "microbe", values_to = "coeff") %>% 
+  left_join(microbe_phyla %>% select(microbe, phylum)) %>% 
+  left_join(arg_annot) %>% 
+  arrange(phylum, mechanism)
+
+tb_coeff %>% 
+  mutate(gene_id = fct_relevel(gene_id, arg_annot$gene_id), 
+         microbe = fct_relevel(microbe, microbe_phyla$microbe)) %>%
+  ggplot(aes(x = gene_id, y = microbe, fill = coeff))+
+  geom_tile() +
+  labs(x = "ARG", y = "Microbial Order") + 
+  scale_fill_gradient(low="white", high="blue") +
+  theme_bw() + 
+  theme(legend.position = "bottom", 
+        #axis.text.x=element_text(angle = 90, hjust = 0), 
+        axis.text.x = element_blank())
+
+
+```
+
+```{r pheatmap, echo=FALSE, fig.width= 13, fig.height= 10}
+#annotation for pheatmap 
+temp_arg <- arg_annot %>% 
+  select(mechanism) %>% 
+  #as.matrix() %>%
+  `rownames<-`(arg_annot$gene_id)
+
+temp_micro <- microbe_phyla %>%
+  select(phylum) %>%
+  #as.matrix() %>%
+  `rownames<-`(microbe_phyla$microbe)
+
+#colors 
+ColourCount1 <- length(unique((temp_micro$phylum)))  
+newCols <- colorRampPalette(brewer.pal(ColourCount1,"Paired"))
+mycolors <- newCols(ColourCount1)
+names(mycolors) <- temp_micro$phylum %>% unique()
+mycolors <- list(phylum = mycolors)
+
+
+pheatmap(t(corr_coeff), fontsize = 7, cluster_rows = F, cluster_cols = F, show_colnames = FALSE,
+         annotation_col = temp_arg %>% as.data.frame(),
+         annotation_row = temp_micro %>% as.data.frame(),
+         color = colorRampPalette(colors = c("white", "blue"), space = "Lab")(100), 
+         annotation_colors =   mycolors )
+
+
+```
+

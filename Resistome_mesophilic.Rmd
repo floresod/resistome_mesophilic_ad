@@ -303,6 +303,5 @@ heat_tree(obj_meta_res,
           node_label_size_range = c(0.01, 0.05), 
           node_label_max = 150)
 
-
 ```
 
