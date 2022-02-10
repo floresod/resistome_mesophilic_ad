@@ -183,7 +183,7 @@ heat_tree(obj_meta,
           node_color_range = c("cyan", "gray", "orange"),
           node_size_range = (c(0.005, 0.05)),
           node_label_size_range = c(0.01, 0.05), 
-          node_label_max = 100)
+          node_label_max = 150)
 
 
 ```
@@ -301,7 +301,7 @@ heat_tree(obj_meta_res,
           node_color_range = c("cyan", "gray", "orange"),
           node_size_range = (c(0.003, 0.05)),
           node_label_size_range = c(0.01, 0.05), 
-          node_label_max = 150)
+          node_label_max = 200)
 
 ```
 

@@ -21,10 +21,11 @@ library(RColorBrewer) #To create color palettes
 #library(boot) #to calculate SD of diversity index
 #library(kableExtra) # for fancy tables
 #library(taxize) #for taxonomical annotation
-library(vegan)
+#library(vegan)
 library(corrplot)
 library(fields)
 library(pheatmap)
+library(qgraph)
 
 options(digits = 3, scipen = 999)
 
@@ -95,6 +96,9 @@ corr_coeff <- correlations$r[names_arg, names_microbes]
 #plot with fields 
 image.plot(corr_coeff, zlim = c(-1,1))
 
+#remove objects 
+rm(matrix_micro, matrix_resistome)
+
 ```
 
 
@@ -122,7 +126,7 @@ tb_coeff %>%
 
 ```
 
-```{r pheatmap, echo=FALSE, fig.width= 13, fig.height= 10}
+```{r pheatmap, echo=FALSE, fig.width= 10, fig.height= 8}
 #annotation for pheatmap 
 temp_arg <- arg_annot %>% 
   select(mechanism) %>% 
@@ -148,6 +152,126 @@ pheatmap(t(corr_coeff), fontsize = 7, cluster_rows = F, cluster_cols = F, show_c
          color = colorRampPalette(colors = c("white", "blue"), space = "Lab")(100), 
          annotation_colors =   mycolors )
 
+#remove objects 
+rm(temp_arg, temp_micro, mycolors, ColourCount1, newCols)
 
 ```
 
+# 2. Summary of the correlations 
+
+
+# 2.1 Microbes vs No. positive correlations 
+
+```{r correlation summaries, echo=FALSE}
+
+# top 10 microbes with more positive correlations 
+temp_summary <- tb_coeff %>% 
+  group_by(microbe, phylum) %>%
+  filter(coeff > 0) %>%
+  summarise(n.pos.corr = sum(coeff > 0), 
+            avg.pos.corr = mean(coeff)) %>% 
+  ungroup() %>%
+  arrange(desc(n.pos.corr))
+
+#order observations 
+temp_summary$microbe <- factor(temp_summary$microbe, levels = temp_summary$microbe)
+
+#plot 
+temp_summary %>% 
+  slice(1:30) %>%
+  ggplot(aes(x = n.pos.corr, y = rev(microbe), color = phylum, size = avg.pos.corr)) + 
+  geom_point() +
+  labs(x = "No. positive correlation", 
+       y = "Microbial order") +
+  scale_x_continuous(breaks = seq(100, 200, 10), limits = c(100, 175)) + 
+  scale_color_brewer(palette="Paired") +
+  scale_size_continuous("Avg. positive corr.", breaks = c(0.20 ,0.30, 0.40, 0.50)) + 
+  theme_bw() + 
+  theme(legend.title = element_text(size = 6, face = "bold"), 
+        legend.text = element_text(size = 5), 
+        axis.title = element_text(color = "black", face = "bold"), 
+        axis.text = element_text(color = "black"))
+
+#remove objects 
+rm(temp_summary)
+
+```
+
+
+```{r by mechanisms, echo=FALSE, warning=FALSE, fig.height= 13, fig.width= 8}
+
+temp_summary <- tb_coeff %>% 
+  group_by(mechanism, microbe, phylum) %>%
+  filter(coeff > 0) %>% 
+  summarise(n.pos.corr = n(), 
+            avg.pos.corr = mean(coeff)) %>% 
+  arrange(mechanism, desc(n.pos.corr),  desc(avg.pos.corr))
+
+temp_summary$microbe <- factor(temp_summary$microbe, levels = temp_summary$microbe %>% unique())
+
+#plot 
+temp_summary %>% 
+  filter(mechanism != "reduced permeability") %>%
+  ungroup() %>% 
+  group_by(mechanism) %>%
+  slice(1:15) %>%
+  ggplot(aes(x = n.pos.corr, y = microbe, color = phylum, size = avg.pos.corr)) + 
+  geom_point() + 
+  labs(x = "No. postive correlations", 
+       y = "Microbial Order") + 
+  scale_color_brewer(palette="Paired") + 
+  facet_wrap(~mechanism, ncol = 1, scales = "free") + 
+  theme_bw()
+
+#remove objects 
+rm(temp_summary)
+  
+```
+
+
+
+# 2 Negative correlations 
+
+```{r negative correlations, echo=FALSE, warning=FALSE}
+# temp object 
+temp_summary <- tb_coeff %>% 
+  filter(coeff < 0) %>% 
+  group_by(microbe, phylum) %>%
+  summarise(n.neg.corr = n(), 
+            avg.neg.corr = mean(coeff)) %>% 
+  ungroup() %>% 
+  arrange(desc(n.neg.corr))
+
+#order microbes 
+temp_summary$microbe <- factor(temp_summary$microbe, levels =temp_summary$microbe)
+
+#plot 
+#plot 
+temp_summary %>% 
+  slice(1:20) %>%
+  ggplot(aes(x = n.neg.corr, y = rev(microbe), color = rev(phylum), size = abs(avg.neg.corr))) + 
+  geom_point() +
+  labs(x = "No. Negative correlations", 
+       y = "Microbial Order") +
+  scale_x_continuous(breaks = seq(100, 250, 10), limits = c(185, 225)) + 
+  scale_color_brewer(palette="Paired") +
+  scale_size_continuous("Avg. negative corr.") + 
+  theme_bw() + 
+  theme(legend.title = element_text(size = 6, face = "bold"), 
+        legend.text = element_text(size = 5), 
+        axis.title = element_text(color = "black", face = "bold"), 
+        axis.text = element_text(color = "black"))
+
+
+```
+
+```{r network analysis, echo=FALSE, eval=FALSE}
+matrix_correlations <- cor_auto(matrix_master %>% scale(), forcePD = TRUE, npn.SKEPTIC = TRUE)
+
+qgraph(matrix_correlations, graph = "pcor", layout = "spring", tuning = 0.25, 
+       sampleSize = length(matrix_master[,1]),
+       posCol = "darkblue", negCol = "red", 
+       vsize = 3, label.font = 3, legend.cex = 1)
+
+
+```
