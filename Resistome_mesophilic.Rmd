@@ -253,6 +253,32 @@ tb_resistome <- data_resistome %>%
 tb_resistome[is.na(tb_resistome)] <- 0
 
 
+#estimate number of unique aRG in manure and digestate 
+data_resistome %>% 
+  left_join(sample_groups) %>%
+  filter(abundance != 0) %>%
+  group_by(groups) %>% 
+  summarise(obs = unique(gene_id) %>% length()) %>% 
+  kable(caption = "Unique ARG in manure and digestate", booktabs = TRUE) %>% 
+  kable_classic()
+
+#t-test for number of ARG 
+temp_tb <- data_resistome %>% 
+  left_join(sample_groups) %>%
+  filter(abundance != 0) %>%
+  group_by(groups, sample) %>% 
+  summarise(obs = unique(gene_id) %>% length())
+
+#dig 
+arg.dig <- temp_tb %>% filter(groups == "digestate") %>% 
+  pull(obs)
+#manure 
+arg.manure <- temp_tb %>% filter(groups == "manure") %>% 
+  pull(obs)
+
+#t.test
+t.test(arg.dig, arg.manure)
+
 #remove data 
 rm(resistome1, resistome2, temp_res1, temp_res2, CARD_2021)
 
@@ -301,7 +327,8 @@ heat_tree(obj_meta_res,
           node_color_range = c("cyan", "gray", "orange"),
           node_size_range = (c(0.003, 0.05)),
           node_label_size_range = c(0.01, 0.05), 
-          node_label_max = 200)
+          node_label_max = 200, 
+          output_file = "figs/resistome.jpeg" )
 
 ```
 

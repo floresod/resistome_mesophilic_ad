@@ -176,8 +176,8 @@ temp_summary <- tb_coeff %>%
 #order observations 
 temp_summary$microbe <- factor(temp_summary$microbe, levels = temp_summary$microbe)
 
-#plot 
-temp_summary %>% 
+#plot
+fig1.b <- temp_summary %>% 
   slice(1:30) %>%
   ggplot(aes(x = n.pos.corr, y = rev(microbe), color = phylum, size = avg.pos.corr)) + 
   geom_point() +
@@ -187,10 +187,18 @@ temp_summary %>%
   scale_color_brewer(palette="Paired") +
   scale_size_continuous("Avg. positive corr.", breaks = c(0.20 ,0.30, 0.40, 0.50)) + 
   theme_bw() + 
-  theme(legend.title = element_text(size = 6, face = "bold"), 
-        legend.text = element_text(size = 5), 
+  theme(legend.title = element_text(face = "bold"), 
+        #legend.text = element_text(size = 5), 
         axis.title = element_text(color = "black", face = "bold"), 
         axis.text = element_text(color = "black"))
+
+#print plot 
+fig1.b 
+
+#save
+tiff("figs/fig1.b.tiff", units = "cm", width = 15, height = 10,  res = 800)
+fig1.b 
+dev.off()
 
 #remove objects 
 rm(temp_summary)
